@@ -1,0 +1,31 @@
+{{> header }}
+<div class="container">
+  <h1>{{title}}</h1>
+
+  {{#if errors}}
+    {{#each errors}}
+      <div class="alert alert-warning" role="alert">{{this.msg}}</div>
+    {{/each}}
+  {{/if}}
+
+  <form method="POST" action="/register">
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input type="text" name="username" class="form-control" placeholder="Enter username" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input type="email" name="email" class="form-control" placeholder="Enter email" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" name="password" class="form-control" placeholder="Enter password" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label for="passwordMatch">Re-enter password</label>
+      <input type="password" name="passwordMatch" class="form-control" placeholder="Repeat password" autocomplete="new-password">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+</div>
+{{> footer-end }}
