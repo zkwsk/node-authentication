@@ -5,10 +5,13 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var expressValidator = require('express-validator');
+var bcrypt = require('bcrypt');
 
 // Authentication Packages
 var session = require('express-session');
-var passport = require('passport');
+var passport = require('passport')
+  , LocalStrategy = require('passport-local').Strategy;
+var MySQLStore = require('express-mysql-session')(session);
 
 var index = require('./routes/index');
 var users = require('./routes/users');
@@ -27,20 +30,65 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(expressValidator());
+
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+var options = {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database : process.env.DB_NAME
+};
+
+var sessionStore = new MySQLStore(options);
+
+app.use(session({
+  // TODO: Read from .env
+  secret: 'keyboard cat',
+  resave: false,
+  store: sessionStore,
+  saveUninitialized: false,
+  // cookie: { secure: true } // true for https
+}))
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use('/', index);
 app.use('/users', users);
 
 app.set('trust proxy', 1) // trust first proxy
-app.use(session({
-  // TODO: Read from .env
-  secret: 'keyboard cat',
-  resave: false,
-  saveUninitialized: false,
-  // cookie: { secure: true } // true for https
-}))
+
+passport.use(new LocalStrategy(
+  function(username, password, done) {
+
+    const db = require('./db');
+    db.query(
+      'SELECT password FROM users WHERE username = ?', 
+      [username], function(err, results, fields) {
+        if (err) { done(err); }
+
+        if (results.length === 0) {
+          done(null, false);
+        } else {
+          const hash = results[0].password.toString();
+
+          bcrypt.compare(password, hash, function(err, response) {
+            if (response === true) {
+              return done(null, { user_id: results[0].id });
+            } else {
+              return done(null, false);
+            }
+          });
+        }
+      });
+  }
+));
+
+
+
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -82,6 +130,5 @@ filenames.forEach(function (filename) {
 hbs.registerHelper('json', function(context) {
     return JSON.stringify(context, null, 2);
 });
-
 
 module.exports = app;
